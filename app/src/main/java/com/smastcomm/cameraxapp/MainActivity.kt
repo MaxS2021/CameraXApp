@@ -27,6 +27,7 @@ class MainActivity : AppCompatActivity() {
     private var imageCapture: ImageCapture? = null
     private lateinit var outputDir: File
     private lateinit var cameraExecutor: ExecutorService
+    private var cameraFacing = CameraSelector.DEFAULT_BACK_CAMERA
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -49,6 +50,17 @@ class MainActivity : AppCompatActivity() {
 
         binding.btnTakePhoto.setOnClickListener {
             takePhoto()
+        }
+
+        binding.btnChangeCam.setOnClickListener {
+            if (cameraFacing == CameraSelector.DEFAULT_BACK_CAMERA) {
+                cameraFacing = CameraSelector.DEFAULT_FRONT_CAMERA
+
+            } else {
+                cameraFacing = CameraSelector.DEFAULT_BACK_CAMERA
+            }
+            Log.d(Constants.TAG, "$cameraFacing")
+            startCamera()
         }
     }
 
@@ -104,11 +116,13 @@ class MainActivity : AppCompatActivity() {
 
             }
             imageCapture = ImageCapture.Builder().build()
-            val cameraSelector = CameraSelector.DEFAULT_BACK_CAMERA
+
+            val cameraSelector = cameraFacing //CameraSelector.DEFAULT_BACK_CAMERA
 
             try {
                 cameraProvaider.unbindAll()
                 cameraProvaider.bindToLifecycle(this, cameraSelector, preview, imageCapture)
+                Log.d(Constants.TAG, "$cameraSelector")
 
             } catch (e: java.lang.Exception) {
                 Log.d(Constants.TAG, "ошибка запуска камеры", e )
