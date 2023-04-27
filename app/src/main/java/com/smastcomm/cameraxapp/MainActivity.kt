@@ -1,16 +1,14 @@
 package com.smastcomm.cameraxapp
 
-import android.content.Context
+
+
 import android.content.pm.PackageManager
 import android.net.Uri
-import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
 import android.util.Log
 import android.widget.Toast
-import androidx.camera.core.CameraSelector
-import androidx.camera.core.ImageCapture
-import androidx.camera.core.ImageCaptureException
-import androidx.camera.core.Preview
+import androidx.appcompat.app.AppCompatActivity
+import androidx.camera.core.*
 import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
@@ -18,9 +16,9 @@ import com.smastcomm.cameraxapp.databinding.ActivityMainBinding
 import java.io.File
 import java.text.SimpleDateFormat
 import java.util.*
-import java.util.concurrent.Executor
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
+
 
 class MainActivity : AppCompatActivity() {
     private lateinit var binding: ActivityMainBinding
@@ -28,6 +26,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var outputDir: File
     private lateinit var cameraExecutor: ExecutorService
     private var cameraFacing = CameraSelector.DEFAULT_BACK_CAMERA
+    lateinit var camera: CameraProvider
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -60,7 +59,7 @@ class MainActivity : AppCompatActivity() {
             } else {
                 cameraFacing = CameraSelector.DEFAULT_BACK_CAMERA
             }
-            Log.d(Constants.TAG, "$cameraFacing")
+            //Log.d(Constants.TAG, "$cameraFacing")
             startCamera()
         }
     }
@@ -122,14 +121,36 @@ class MainActivity : AppCompatActivity() {
 
             try {
                 cameraProvaider.unbindAll()
-                cameraProvaider.bindToLifecycle(this, cameraSelector, preview, imageCapture)
-                Log.d(Constants.TAG, "$cameraSelector")
+                val camera = cameraProvaider.bindToLifecycle(this, cameraSelector, preview, imageCapture)
+                //Log.d(Constants.TAG, "$cameraSelector")
+                
+                binding.toggleFlash.setOnClickListener {
+                    if (camera.cameraInfo.hasFlashUnit()) {
+                        if (camera.cameraInfo.torchState.value === 0) {
+                            camera.cameraControl.enableTorch(true)
+                            binding.toggleFlash.setImageResource(R.drawable.baseline_flash_off_24)
+                        } else {
+                            camera.cameraControl.enableTorch(false)
+                            binding.toggleFlash.setImageResource(R.drawable.baseline_flash_on_24)
+                        }
+                    } else {
+                        runOnUiThread {
+                            Toast.makeText(
+                                this@MainActivity,
+                                "Вспышка не доступна",
+                                Toast.LENGTH_SHORT
+                            ).show()
+                        }
+                    }
+                    //setFlashIcon(camera)
+                }
 
             } catch (e: java.lang.Exception) {
                 Log.d(Constants.TAG, "ошибка запуска камеры", e )
             }
         }, ContextCompat.getMainExecutor(this))
     }
+
 
     override fun onRequestPermissionsResult(
         requestCode: Int,
