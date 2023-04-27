@@ -34,21 +34,21 @@ class MainActivity : AppCompatActivity() {
         setContentView(binding.root)
         supportActionBar?.hide()
 
+        getPermission()
+
         outputDir = getOutputDir()
         cameraExecutor = Executors.newSingleThreadExecutor()
+
+        //startCamera()
 
         if (allPermissionGranted()) {
             //Toast.makeText(this, "Разрешение для Камеры получено", Toast.LENGTH_SHORT).show()
             startCamera()
         } else {
-            ActivityCompat.requestPermissions(
-                this,
-                Constants.REQUIRED_PERMISSIONS,
-                Constants.REQUEST_CODE_PERMISSION
-            )
+            getPermission()
         }
 
-        binding.capture.setOnClickListener {
+        binding.capt1.setOnClickListener {
             takePhoto()
         }
 
@@ -123,6 +123,30 @@ class MainActivity : AppCompatActivity() {
                 cameraProvaider.unbindAll()
                 val camera = cameraProvaider.bindToLifecycle(this, cameraSelector, preview, imageCapture)
                 //Log.d(Constants.TAG, "$cameraSelector")
+
+                binding.capture.setOnClickListener {
+                    //takePhoto()
+                    val photoFile = File(outputDir,
+                        SimpleDateFormat(Constants.FILE_NAME_FORMAT, Locale.getDefault())
+                            .format(System.currentTimeMillis()) + ".png")
+
+                    val outputOption = ImageCapture.OutputFileOptions.Builder(photoFile).build()
+
+                    imageCapture!!.takePicture(outputOption, ContextCompat.getMainExecutor(this),  //Executors.newCachedThreadPool()
+                        object : ImageCapture.OnImageSavedCallback {
+                            override fun onImageSaved(outputFileResults: ImageCapture.OutputFileResults) {
+                                val savedUri = Uri.fromFile(photoFile)
+                                val msg = "Фото сохранено  $savedUri"
+                                Toast.makeText(this@MainActivity, msg, Toast.LENGTH_SHORT).show()
+
+                            }
+
+                            override fun onError(exception: ImageCaptureException) {
+                                Log.e(Constants.TAG, "Ошибка: ${exception.message}", exception )
+                            }
+
+                        })
+                }
                 
                 binding.toggleFlash.setOnClickListener {
                     if (camera.cameraInfo.hasFlashUnit()) {
@@ -175,4 +199,29 @@ class MainActivity : AppCompatActivity() {
         Constants.REQUIRED_PERMISSIONS.all {
             ContextCompat.checkSelfPermission(baseContext, it) == PackageManager.PERMISSION_GRANTED
         }
+
+    private fun getPermission() {
+        var permissionList = mutableListOf<String>()
+        Constants.REQUIRED_PERMISSIONS.forEach {
+            if (ContextCompat.checkSelfPermission(this, it) != PackageManager.PERMISSION_GRANTED) {
+                permissionList.add(it)
+            }
+        }
+        if (permissionList.size > 0) {
+            requestPermissions(permissionList.toTypedArray(), Constants.REQUEST_CODE_PERMISSION)
+        }
+    }
+
+//    override fun onRequestPermissionsResult(
+//        requestCode: Int,
+//        permissions: Array<out String>,
+//        grantResults: IntArray
+//    ) {
+//        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+//        grantResults.forEach {
+//            if (it != PackageManager.PERMISSION_GRANTED) {
+//                getPermission()
+//            }
+//        }
+//    }
 }
