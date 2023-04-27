@@ -33,6 +33,7 @@ class MainActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
+        supportActionBar?.hide()
 
         outputDir = getOutputDir()
         cameraExecutor = Executors.newSingleThreadExecutor()
@@ -48,11 +49,11 @@ class MainActivity : AppCompatActivity() {
             )
         }
 
-        binding.btnTakePhoto.setOnClickListener {
+        binding.capture.setOnClickListener {
             takePhoto()
         }
 
-        binding.btnChangeCam.setOnClickListener {
+        binding.flipCamera.setOnClickListener {
             if (cameraFacing == CameraSelector.DEFAULT_BACK_CAMERA) {
                 cameraFacing = CameraSelector.DEFAULT_FRONT_CAMERA
 
