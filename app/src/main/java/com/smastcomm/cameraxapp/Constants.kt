@@ -8,7 +8,7 @@ object Constants {
     const val REQUEST_CODE_PERMISSION = 101
     val REQUIRED_PERMISSIONS = arrayOf(
         Manifest.permission.CAMERA,
-        //Manifest.permission.WRITE_EXTERNAL_STORAGE,
+        Manifest.permission.RECORD_AUDIO,
         //Manifest.permission.READ_EXTERNAL_STORAGE
     )
 }

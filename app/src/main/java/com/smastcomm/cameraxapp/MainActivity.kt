@@ -2,11 +2,16 @@ package com.smastcomm.cameraxapp
 
 
 
+import android.annotation.SuppressLint
 import android.content.pm.PackageManager
+import android.graphics.Point
 import android.net.Uri
+import android.os.Build
 import android.os.Bundle
 import android.util.Log
+import android.util.Size
 import android.widget.Toast
+import androidx.annotation.RequiresApi
 import androidx.appcompat.app.AppCompatActivity
 import androidx.camera.core.*
 import androidx.camera.lifecycle.ProcessCameraProvider
@@ -14,6 +19,7 @@ import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import com.smastcomm.cameraxapp.databinding.ActivityMainBinding
 import java.io.File
+import java.lang.Exception
 import java.text.SimpleDateFormat
 import java.util.*
 import java.util.concurrent.ExecutorService
@@ -28,6 +34,10 @@ class MainActivity : AppCompatActivity() {
     private var cameraFacing = CameraSelector.DEFAULT_BACK_CAMERA
     lateinit var camera: CameraProvider
 
+    private lateinit var videoCapture: VideoCapture
+
+    @RequiresApi(Build.VERSION_CODES.R)
+    @SuppressLint("RestrictedApi", "MissingPermission")
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         binding = ActivityMainBinding.inflate(layoutInflater)
@@ -39,17 +49,33 @@ class MainActivity : AppCompatActivity() {
         outputDir = getOutputDir()
         cameraExecutor = Executors.newSingleThreadExecutor()
 
-        //startCamera()
+        startCamera()
 
-        if (allPermissionGranted()) {
-            //Toast.makeText(this, "Разрешение для Камеры получено", Toast.LENGTH_SHORT).show()
-            startCamera()
-        } else {
-            getPermission()
+        binding.startVideo.setOnClickListener {
+            binding.startVideo.setImageResource(R.drawable.ic_play_red)
+
+            val videoFile = File(outputDir,
+                SimpleDateFormat(Constants.FILE_NAME_FORMAT, Locale.getDefault())
+                    .format(System.currentTimeMillis()) + ".mp4")
+
+            val outputFileOptions = VideoCapture.OutputFileOptions.Builder(videoFile).build()
+
+            videoCapture.startRecording(outputFileOptions,ContextCompat.getMainExecutor(this),
+                object: VideoCapture.OnVideoSavedCallback{
+                override fun onVideoSaved(outputFileResults: VideoCapture.OutputFileResults) {
+                    Log.d(Constants.TAG,"Видео записано")
+                }
+
+                override fun onError(videoCaptureError: Int, message: String, cause: Throwable?) {
+                    Log.d(Constants.TAG,"Ошибка записи Видео: " + message)
+                }
+
+            })
         }
 
-        binding.capt1.setOnClickListener {
-            takePhoto()
+        binding.stoptVideo.setOnClickListener {
+            binding.startVideo.setImageResource(R.drawable.ic_play_white)
+            videoCapture.stopRecording()
         }
 
         binding.flipCamera.setOnClickListener {
@@ -105,6 +131,8 @@ class MainActivity : AppCompatActivity() {
 
     }
 
+    @SuppressLint("RestrictedApi")
+    @RequiresApi(Build.VERSION_CODES.R)
     private fun startCamera() {
         val cameraProviderFuture = ProcessCameraProvider.getInstance(this)
         cameraProviderFuture.addListener({
@@ -117,12 +145,25 @@ class MainActivity : AppCompatActivity() {
             }
             imageCapture = ImageCapture.Builder().build()
 
+            val point = Point()
+            val size = display?.getRealSize(point)
+
+            videoCapture = VideoCapture.Builder()
+                .setTargetResolution(Size(point.x,point.y))
+                .setAudioBitRate(320000)
+                .setAudioSampleRate(44100)
+                .setAudioChannelCount(2)
+                .build()
+
+
             val cameraSelector = cameraFacing //CameraSelector.DEFAULT_BACK_CAMERA
 
             try {
                 cameraProvaider.unbindAll()
-                val camera = cameraProvaider.bindToLifecycle(this, cameraSelector, preview, imageCapture)
+                val camera = cameraProvaider.bindToLifecycle(this, cameraSelector, preview, imageCapture, videoCapture)
                 //Log.d(Constants.TAG, "$cameraSelector")
+
+
 
                 binding.capture.setOnClickListener {
                     //takePhoto()
@@ -166,39 +207,15 @@ class MainActivity : AppCompatActivity() {
                             ).show()
                         }
                     }
-                    //setFlashIcon(camera)
+
                 }
 
-            } catch (e: java.lang.Exception) {
+            } catch (e: Exception) {
                 Log.d(Constants.TAG, "ошибка запуска камеры", e )
             }
         }, ContextCompat.getMainExecutor(this))
     }
 
-
-    override fun onRequestPermissionsResult(
-        requestCode: Int,
-        permissions: Array<String>,
-        grantResults: IntArray
-    ) {
-        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
-        if (requestCode == Constants.REQUEST_CODE_PERMISSION) {
-            if (allPermissionGranted()) {
-                startCamera()
-
-            } else {
-                Toast.makeText(this, "Разрешение Камеры НЕ получено", Toast.LENGTH_LONG).show()
-                finish()
-            }
-        }
-    }
-
-
-
-    private fun allPermissionGranted() =
-        Constants.REQUIRED_PERMISSIONS.all {
-            ContextCompat.checkSelfPermission(baseContext, it) == PackageManager.PERMISSION_GRANTED
-        }
 
     private fun getPermission() {
         var permissionList = mutableListOf<String>()
@@ -212,16 +229,16 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-//    override fun onRequestPermissionsResult(
-//        requestCode: Int,
-//        permissions: Array<out String>,
-//        grantResults: IntArray
-//    ) {
-//        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
-//        grantResults.forEach {
-//            if (it != PackageManager.PERMISSION_GRANTED) {
-//                getPermission()
-//            }
-//        }
-//    }
+    override fun onRequestPermissionsResult(
+        requestCode: Int,
+        permissions: Array<out String>,
+        grantResults: IntArray
+    ) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+        grantResults.forEach {
+            if (it != PackageManager.PERMISSION_GRANTED) {
+                getPermission()
+            }
+        }
+    }
 }
